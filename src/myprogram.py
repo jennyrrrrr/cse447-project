@@ -10,25 +10,14 @@ dataset = load_dataset("amazon_reviews_multi", "all_languages")
 
 import random
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 import nltk
+import torch.utils.data as Data
 nltk.download('punkt')
 from nltk import word_tokenize
 
 import Trie
-
-import torch
-import torch.nn as nn
-from torchvision import datasets
-from torchvision import transforms
-import numpy as np
-import torch.nn.functional as F
-import torch.optim as optim
-import torch.utils.data as Data
 import MultiLM
 
 n_hidden = 256
@@ -45,11 +34,11 @@ word2idx = []
 tokenized_corpus = []
 vocab_size = 0
 
-def load_training_data(cls):
+def load_training_data():
     train_df = dataset['train']
     val_df = dataset['validation']
     test_df = dataset['test']
-    corpus = train_df["review_body"] + val_df["review_body"] + test_df["review_body"]
+    corpus = train_df["review_body"]
 
     vocab = []
     token_set = set()
@@ -68,8 +57,6 @@ def load_training_data(cls):
     word2idx['<pad>'] = 0
     idx2word = {idx+1 : w for (idx, w) in enumerate(vocab)}
     idx2word[0] = '<pad>'
-
-vocab_size = len(word2idx)
 
 def one_hot(k): 
     v = np.zeros(len(word2idx))
@@ -180,7 +167,9 @@ if __name__ == '__main__':
             os.makedirs(args.work_dir)
         print('Instatiating model')
         device = torch.device("cuda")
-        model = MultiLM().to(device)
+        feature_size = FEATURE_SIZE
+        vocab_size = len(word2idx)
+        model = MultiLM(vocab_size, feature_size).to(device)
         optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
         print('Loading training data')
         sent_tensor, labels = data_helper()
