@@ -123,7 +123,7 @@ def run_train(model, device, optimizer, loader, lr, epoch, log_interval):
     print('Average Loss', avg_loss)
     return avg_loss
 
-def run_pred(data, word2idx):
+def run_pred(data, word2idx, idx2word):
     # your code here
     preds = []
     all_chars = string.ascii_letters
@@ -160,6 +160,11 @@ def run_pred(data, word2idx):
         
     return preds
 
+def load_word2idx():
+    with open('saved_dictionary.pkl', 'rb') as f:
+        loaded_dict = pickle.load(f)
+    return loaded_dict
+    
 '''
 def save(work_dir):
     # your code here
@@ -211,10 +216,13 @@ if __name__ == '__main__':
     elif args.mode == 'test':
         print('Loading model')
         model = MultiLM.load_state_dict(torch.load(args.work_dir))
+        print('Loading word2idx and idx2word')
+        word2idx = load_word2idx()
+        idx2word = {w : idx for (idx, w) in word2idx}
         print('Loading test data from {}'.format(args.test_data))
         test_data = load_test_data(args.test_data)
         print('Making predictions')
-        pred = model.run_pred(test_data)
+        pred = model.run_pred(test_data, word2idx, idx2word)
         print('Writing predictions to {}'.format(args.test_output))
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
