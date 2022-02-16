@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-#！pip install datasets
+#!pip install datasets
 import os
 import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 from datasets import load_dataset
-dataset = load_dataset("amazon_reviews_multi", "all_languages")
-
+# dataset = load_dataset("amazon_reviews_multi", "all_languages")
+#
 import random
 import numpy as np
 import torch
@@ -16,9 +16,10 @@ import nltk
 import torch.utils.data as Data
 nltk.download('punkt')
 from nltk import word_tokenize
+import pickle
 
-import Trie
-import MultiLM
+from Trie import Trie
+from MultiLM import MultiLM
 
 n_hidden = 256
 SEQUENCE_LENGTH = 100
@@ -128,31 +129,42 @@ def run_pred(data, word2idx, idx2word):
     preds = []
     all_chars = string.ascii_letters
     for inp in data:
+        inp = inp.lower()
         curr = inp.split(' ')[-1]
+        # print(curr)
         old = inp.split(' ')[:-1]
+        # print(old)
         
         test_tensor = torch.zeros((1, 4)).int()
-        
+
         if len(old) >= 1:
-            test_tensor[0][0] = word2idx[old[0]]
+            if old[0] in word2idx.keys():
+                test_tensor[0][0] = word2idx[old[0]]
         if len(old) >= 2:
-            test_tensor[0][1] = word2idx[old[1]]
+            if old[1] in word2idx.keys():
+                test_tensor[0][1] = word2idx[old[1]]
         if len(old) >= 3:
-            test_tensor[0][2] = word2idx[old[2]]    
+            if old[2] in word2idx.keys():
+                test_tensor[0][2] = word2idx[old[2]]
         if len(old) >= 4:
-            test_tensor[0][3] = word2idx[old[3]]
-        hidden = torch.zeros(1, 1, n_hidden).to(device)
-        out = torch.nn.functional.softmax(model(test_tensor.to(device), hidden))
+            if old[3] in word2idx.keys():
+                test_tensor[0][3] = word2idx[old[3]]
+        hidden = torch.zeros(1, 1, n_hidden) #.to(device)
+        out = torch.nn.functional.softmax(model(test_tensor, hidden))
 
         word_to_prob = {}
-        for idx, prob in enumerate(out):
+        for idx, prob in enumerate(out[0]):
             word_to_prob[idx2word[idx]] = prob
         
         tree = Trie(word_to_prob)
         res = tree.advance_curr(curr)
+        words = {}
         if res == 1:
             words = tree.get_next_char()
-        top_guesses = words.key()
+        print('words', words)
+        top_guesses = []
+        for word in words:
+            top_guesses.append(word[0])
         for _ in range(3 - len(top_guesses)):
             top_guesses.append(random.choice(all_chars))
         #top_guesses = [random.choice(all_chars) for _ in range(3)]
@@ -161,7 +173,7 @@ def run_pred(data, word2idx, idx2word):
     return preds
 
 def load_word2idx():
-    with open('saved_dictionary.pkl', 'rb') as f:
+    with open('src/saved_dictionary.pkl', 'rb') as f:
         loaded_dict = pickle.load(f)
     return loaded_dict
     
@@ -182,6 +194,16 @@ def load(work_dir):
 
 
 if __name__ == '__main__':
+    n_hidden = 256
+    SEQUENCE_LENGTH = 100
+    BATCH_SIZE = 256
+    FEATURE_SIZE = 512
+    TEST_BATCH_SIZE = 256
+    EPOCHS = 20
+    LEARNING_RATE = 0.003
+    WEIGHT_DECAY = 0.0005
+    PRINT_INTERVAL = 10
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('mode', choices=('train', 'test'), help='what to run')
     parser.add_argument('--work_dir', help='where to save', default='work')
@@ -214,17 +236,19 @@ if __name__ == '__main__':
             print('Saving model')
             model.save_model(args.work_dir + 'model.checkpoint')
     elif args.mode == 'test':
-        print('Loading model')
-        model = MultiLM.load_state_dict(torch.load(args.work_dir))
         print('Loading word2idx and idx2word')
         word2idx = load_word2idx()
-        idx2word = {w : idx for (idx, w) in word2idx}
+        # print(word2idx)
+        idx2word = {word2idx[w] : w for w in word2idx.keys()}
+        print('Loading model')
+        model = MultiLM(len(word2idx), 512)
+        model.load_state_dict(torch.load('src/model.checkpoint', map_location=torch.device('cpu')))
         print('Loading test data from {}'.format(args.test_data))
         test_data = load_test_data(args.test_data)
         print('Making predictions')
-        pred = model.run_pred(test_data, word2idx, idx2word)
+        pred = run_pred(test_data, word2idx, idx2word)
         print('Writing predictions to {}'.format(args.test_output))
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
-        model.write_pred(pred, args.test_output)
+        write_pred(pred, args.test_output)
     else:
         raise NotImplementedError('Unknown mode {}'.format(args.mode))

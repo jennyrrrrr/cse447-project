@@ -17,7 +17,7 @@ class MultiLM(nn.Module):
         super(MultiLM, self).__init__()
         self.vocab_size = vocab_size
         self.feature_size = feature_size
-        self.encoder = nn.Embedding(self.vocab_size, self.feature_size, padding_idx = 0)
+        self.encoder = nn.Embedding(self.vocab_size, self.feature_size)
         self.rnn = nn.RNN(self.feature_size, hidden_size=n_hidden)
         self.layer_out = nn.Linear(n_hidden, self.vocab_size)
 

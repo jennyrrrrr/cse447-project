@@ -7,3 +7,5 @@ VOLUME ["/job/data", "/job/src", "/job/work", "/job/output"]
 RUN pip install tqdm
 RUN pip install datasets
 RUN pip install numpy
+RUN pip install torch
+RUN pip install nltk
