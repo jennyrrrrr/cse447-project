@@ -1,9 +1,25 @@
 #!/usr/bin/env python
+#！pip install datasets
 import os
 import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
+from datasets import load_dataset
+dataset = load_dataset("amazon_reviews_multi", "all_languages")
+
+import random
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import nltk
+nltk.download('punkt')
+from nltk import word_tokenize
+
+import Trie
 
 class MyModel:
     """
@@ -14,7 +30,22 @@ class MyModel:
     def load_training_data(cls):
         # your code here
         # this particular model doesn't train
-        return []
+        train_df = dataset['train']
+        val_df = dataset['validation']
+        test_df = dataset['test']
+        corpus = train_df["review_body"] + val_df["review_body"] + test_df["review_body"]
+        vocab = []
+        tokenized_corpus = []
+        for sentence in corpus:
+            tok_sen = word_tokenize(sentence.lower())
+            tokenized_corpus.append(tok_sen)
+            for word in tok_sen:
+                if word not in vocab:
+                    vocab.append(word)
+        word2idx = {w: idx + 1 for (idx, w) in enumerate(vocab)}
+        word2idx['<pad>'] = 0
+        idx2word = {idx + 1: w for (idx, w) in enumerate(vocab)}
+        idx2word[0] = '<pad>'
 
     @classmethod
     def load_test_data(cls, fname):
