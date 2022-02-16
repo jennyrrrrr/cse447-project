@@ -123,16 +123,32 @@ def run_train(model, device, optimizer, loader, lr, epoch, log_interval):
     print('Average Loss', avg_loss)
     return avg_loss
 
-def run_pred(data):
+def run_pred(data, word2idx):
     # your code here
     preds = []
     all_chars = string.ascii_letters
     for inp in data:
         curr = inp.split(' ')[-1]
         old = inp.split(' ')[:-1]
-        # TODO: change this
-        pred = self.model(old)
-        tree = Trie(pred)
+        
+        test_tensor = torch.zeros((1, 4)).int()
+        
+        if len(old) >= 1:
+            test_tensor[0][0] = word2idx[old[0]]
+        if len(old) >= 2:
+            test_tensor[0][1] = word2idx[old[1]]
+        if len(old) >= 3:
+            test_tensor[0][2] = word2idx[old[2]]    
+        if len(old) >= 4:
+            test_tensor[0][3] = word2idx[old[3]]
+        hidden = torch.zeros(1, 1, n_hidden).to(device)
+        out = torch.nn.functional.softmax(model(test_tensor.to(device), hidden))
+
+        word_to_prob = {}
+        for idx, prob in enumerate(out):
+            word_to_prob[idx2word[idx]] = prob
+        
+        tree = Trie(word_to_prob)
         res = tree.advance_curr(curr)
         if res == 1:
             words = tree.get_next_char()
@@ -141,6 +157,7 @@ def run_pred(data):
             top_guesses.append(random.choice(all_chars))
         #top_guesses = [random.choice(all_chars) for _ in range(3)]
         preds.append(''.join(top_guesses))
+        
     return preds
 
 '''
