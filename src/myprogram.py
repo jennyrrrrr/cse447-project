@@ -82,7 +82,7 @@ def data_helper():
                 sent_tensor[k][1] = sen[i-1]
                 sent_tensor[k][2] = sen[i]
             else:
-                sent_tensor[k][0] = sen[i-2]
+                sent_tensor[k][0] = sen[i-3]
                 sent_tensor[k][1] = sen[i-2]
                 sent_tensor[k][2] = sen[i-1]
                 sent_tensor[k][3] = sen[i]
