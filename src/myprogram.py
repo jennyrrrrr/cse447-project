@@ -183,9 +183,9 @@ if __name__ == '__main__':
             model.save_model(args.work_dir + 'model.checkpoint')
     elif args.mode == 'test':
         print('Loading model')
-        model = MultiLM.load_model(args.work_dir)
+        model = MultiLM.load_state_dict(torch.load(args.work_dir))
         print('Loading test data from {}'.format(args.test_data))
-        test_data = MultiLM.load_test_data(args.test_data)
+        test_data = load_test_data(args.test_data)
         print('Making predictions')
         pred = model.run_pred(test_data)
         print('Writing predictions to {}'.format(args.test_output))
