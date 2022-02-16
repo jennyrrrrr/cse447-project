@@ -128,8 +128,18 @@ def run_pred(data):
     preds = []
     all_chars = string.ascii_letters
     for inp in data:
-        # this model just predicts a random character each time
-        top_guesses = [random.choice(all_chars) for _ in range(3)]
+        curr = inp.split(' ')[-1]
+        old = inp.split(' ')[:-1]
+        # TODO: change this
+        pred = self.model(old)
+        tree = Trie(pred)
+        res = tree.advance_curr(curr)
+        if res == 1:
+            words = tree.get_next_char()
+        top_guesses = words.key()
+        for _ in range(3 - len(top_guesses)):
+            top_guesses.append(random.choice(all_chars))
+        #top_guesses = [random.choice(all_chars) for _ in range(3)]
         preds.append(''.join(top_guesses))
     return preds
 
