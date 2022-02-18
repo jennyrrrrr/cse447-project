@@ -23,7 +23,7 @@ class MultiLM(nn.Module):
 
     def forward(self, x, hidden):
         x = x.transpose(0,1)
-        x = self.encoder(x)
+        x = self.encoder(x.long())
         x, hidden = self.rnn(x, hidden)
         x = x[-1]
         x = self.layer_out(x)

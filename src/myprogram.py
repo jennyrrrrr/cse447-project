@@ -135,7 +135,7 @@ def run_pred(data, word2idx, idx2word):
         old = inp.split(' ')[:-1]
         # print(old)
         
-        test_tensor = torch.zeros((1, 4)).int()
+        test_tensor = torch.zeros((1, 4)).int().to(device)
 
         if len(old) >= 1:
             if old[0] in word2idx.keys():
@@ -149,8 +149,8 @@ def run_pred(data, word2idx, idx2word):
         if len(old) >= 4:
             if old[3] in word2idx.keys():
                 test_tensor[0][3] = word2idx[old[3]]
-        hidden = torch.zeros(1, 1, n_hidden) #.to(device)
-        out = torch.nn.functional.softmax(model(test_tensor, hidden))
+        hidden = torch.zeros(1, 1, n_hidden).to(device)
+        out = torch.nn.functional.softmax(model(test_tensor, hidden), dim=1)
 
         word_to_prob = {}
         for idx, prob in enumerate(out[0]):
@@ -203,6 +203,7 @@ if __name__ == '__main__':
     LEARNING_RATE = 0.003
     WEIGHT_DECAY = 0.0005
     PRINT_INTERVAL = 10
+    device = torch.device("cuda")
 
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('mode', choices=('train', 'test'), help='what to run')
@@ -236,13 +237,15 @@ if __name__ == '__main__':
             print('Saving model')
             model.save_model(args.work_dir + 'model.checkpoint')
     elif args.mode == 'test':
+        device = torch.device("cuda")
         print('Loading word2idx and idx2word')
         word2idx = load_word2idx()
         # print(word2idx)
         idx2word = {word2idx[w] : w for w in word2idx.keys()}
         print('Loading model')
-        model = MultiLM(len(word2idx), 512)
-        model.load_state_dict(torch.load('src/model.checkpoint', map_location=torch.device('cpu')))
+        model = MultiLM(len(word2idx), 512).to(device)
+        # model.load_state_dict(torch.load('src/model.checkpoint', map_location=torch.device('gpu')))
+        model.load_state_dict(torch.load('src/model.checkpoint'))
         print('Loading test data from {}'.format(args.test_data))
         test_data = load_test_data(args.test_data)
         print('Making predictions')
