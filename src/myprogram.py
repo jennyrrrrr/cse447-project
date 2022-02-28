@@ -124,8 +124,10 @@ def run_train(model, device, optimizer, loader, lr, epoch, log_interval):
     print('Average Loss', avg_loss)
     return avg_loss
 
-def run_pred(data, word2idx, idx2word):
-    # your code here
+def run_pred(data, word2idx, idx2word, trie):
+    # return dict -> {char : prob}
+    #start_time = time.time()
+    #print(start_time)
     preds = []
     all_chars = string.ascii_letters
     for inp in data:
@@ -134,41 +136,56 @@ def run_pred(data, word2idx, idx2word):
         # print(curr)
         old = inp.split(' ')[:-1]
         # print(old)
-        
-        test_tensor = torch.zeros((1, 4)).int().to(device)
 
-        if len(old) >= 1:
-            if old[0] in word2idx.keys():
-                test_tensor[0][0] = word2idx[old[0]]
-        if len(old) >= 2:
-            if old[1] in word2idx.keys():
-                test_tensor[0][1] = word2idx[old[1]]
-        if len(old) >= 3:
-            if old[2] in word2idx.keys():
-                test_tensor[0][2] = word2idx[old[2]]
-        if len(old) >= 4:
-            if old[3] in word2idx.keys():
-                test_tensor[0][3] = word2idx[old[3]]
-        hidden = torch.zeros(1, 1, n_hidden).to(device)
-        out = torch.nn.functional.softmax(model(test_tensor, hidden), dim=1)
+        # if the last one word is " ", we use rnn
+        if curr == '':
+            test_tensor = torch.zeros((1, 4)).int().to(device)
 
-        word_to_prob = {}
-        for idx, prob in enumerate(out[0]):
-            word_to_prob[idx2word[idx]] = prob
+            for i in range(4):
+                if len(old) >= i + 1 and old[i] in word2idx.keys():
+                    test_tensor[0][i] = word2idx[old[i]]
+
+            hidden = torch.zeros(1, 1, n_hidden).to(device)
+            out = torch.nn.functional.softmax(model(test_tensor, hidden), dim=1)
         
-        tree = Trie(word_to_prob)
-        res = tree.advance_curr(curr)
-        words = {}
-        if res == 1:
-            words = tree.get_next_char()
-        print('words', words)
-        top_guesses = []
-        for word in words:
-            top_guesses.append(word[0])
-        for _ in range(3 - len(top_guesses)):
-            top_guesses.append(random.choice(all_chars))
-        #top_guesses = [random.choice(all_chars) for _ in range(3)]
-        preds.append(''.join(top_guesses))
+            # rnn_time = time.time()
+            # print('rnn_time', rnn_time - start_time)
+
+            best_char_prob = {}
+            least = float('inf')
+            least_key = ''
+            for idx, prob in enumerate(out[0]):
+                char = idx2word[idx][0]
+                if char in best_char_prob.keys():
+                    best_char_prob[char] = max(prob, best_char_prob[char])
+
+                    if best_char_prob[char] < least:
+                        least = best_char_prob[char]
+                        least_key = char
+
+                else: 
+                    if len(best_char_prob) < 3:
+                        least, least_key = append_to_dict(char, prob, best_char_prob)
+                    elif prob > least:
+                        del best_char_prob[least_key]
+                        least, least_key = append_to_dict(char, prob, best_char_prob)
+
+            preds.append(''.join(best_char_prob.keys()))
+
+        else:
+            res = trie.advance_curr(curr)
+            words = []
+            if res == 1:
+                words = trie.get_next_char()
+            top_guesses = []
+            for word in words:
+                top_guesses.append(word)
+            for _ in range(3 - len(top_guesses)):
+                top_guesses.append(random.choice(all_chars))
+            preds.append(''.join(top_guesses))
+            # trie_time = time.time()
+            # print('trie time:', trie_time - new_trie)
+            # start_time = time.time()
         
     return preds
 
@@ -177,6 +194,13 @@ def load_word2idx():
         loaded_dict = pickle.load(f)
     return loaded_dict
     
+    
+def load_vocabtrie():
+    # TODO: filename has to be saved_dictionary_vocab.pkl
+    with open('src/saved_dictionary_vocab.pkl', 'rb') as f:
+        word_to_prob = pickle.load(f)
+    return Trie(word_to_prob)
+
 '''
 def save(work_dir):
     # your code here
@@ -238,18 +262,23 @@ if __name__ == '__main__':
             model.save_model(args.work_dir + 'model.checkpoint')
     elif args.mode == 'test':
         device = torch.device("cuda")
+        
         print('Loading word2idx and idx2word')
         word2idx = load_word2idx()
-        # print(word2idx)
         idx2word = {word2idx[w] : w for w in word2idx.keys()}
+        vocabtrie = load_vocabtrie()
+        
         print('Loading model')
         model = MultiLM(len(word2idx), 512).to(device)
         # model.load_state_dict(torch.load('src/model.checkpoint', map_location=torch.device('gpu')))
         model.load_state_dict(torch.load('src/model.checkpoint'))
+        
         print('Loading test data from {}'.format(args.test_data))
         test_data = load_test_data(args.test_data)
+        
         print('Making predictions')
-        pred = run_pred(test_data, word2idx, idx2word)
+        pred = run_pred(test_data, word2idx, idx2word, vocab_trie)
+        
         print('Writing predictions to {}'.format(args.test_output))
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         write_pred(pred, args.test_output)
