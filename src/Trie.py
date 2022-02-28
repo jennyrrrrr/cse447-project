@@ -34,15 +34,25 @@ class Trie:
 
     # need to call advance_curr() before this
     def get_next_char(self):
-        best_char_prob = []
+        best_char_prob = {}
+        least = float('inf')
+        least_key = ''
         for char, prob in self.curr.children_prob.items():
-            if len(best_char_prob) < 3:
-                append_to_sorted((char, prob), best_char_prob)
-            elif prob > best_char_prob[2][1]:
-                best_char_prob.pop(2)
-                append_to_sorted((char, prob), best_char_prob)
+            if char in best_char_prob.keys():
+                best_char_prob[char] = max(prob, best_char_prob[char])
 
-        return best_char_prob
+                if best_char_prob[char] < least:
+                    least = best_char_prob[char]
+                    least_key = char
+
+            else:
+                if len(best_char_prob) < 3:
+                    least, least_key = append_to_dict(char, prob, best_char_prob)
+                elif prob > least:
+                    del best_char_prob[least_key]
+                    least, least_key = append_to_dict(char, prob, best_char_prob)
+
+        return best_char_prob.keys()
 
     # return 0 if the str is not present in the trie
     # return 1 if curr is advanced
@@ -63,22 +73,14 @@ class Trie:
         self.curr = self.root
 
 
-def append_to_sorted(pair, list_pair):
-    prob = pair[1]
+def append_to_dict(char, prob, best_char_prob):
+    best_char_prob[char] = prob
 
-    if len(list_pair) == 0:
-        list_pair.append(pair)
-    elif len(list_pair) == 1:
-        if prob > list_pair[0][1]:
-            list_pair.insert(0, pair)
-        else:
-            list_pair.append(pair)
-    elif len(list_pair) == 2:
-        if prob > list_pair[0][1] and prob > list_pair[1][1]:
-            list_pair.insert(0, pair)
-        elif prob > list_pair[0][1] and prob < list_pair[1][1]:
-            list_pair.insert(1, pair)
-        else:
-            list_pair.append(pair)
-    else:
-        raise ValueError("list_pair has to be of size < 3.")
+    least = float('inf')
+    least_key = ''
+    for char, prob in best_char_prob.items():
+        if prob < least:
+            least = prob
+            least_key = char
+    
+    return least, least_key
