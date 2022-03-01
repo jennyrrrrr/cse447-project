@@ -2,15 +2,6 @@ import torch
 import torch.nn as nn
 
 n_hidden = 256
-SEQUENCE_LENGTH = 100
-BATCH_SIZE = 256
-FEATURE_SIZE = 512
-TEST_BATCH_SIZE = 256
-EPOCHS = 20
-LEARNING_RATE = 0.003
-WEIGHT_DECAY = 0.0005
-PRINT_INTERVAL = 10
-batch_size = 256
 
 class MultiLM(nn.Module):
     def __init__(self, vocab_size, feature_size):
