@@ -64,7 +64,7 @@ class Trie:
             if str[i] in self.curr.children:
                 self.curr = self.curr.children[str[i]]
             else:
-                print("This str is not in the trie.")
+                #print("This str is not in the trie.")
                 return 0
 
         return 1
