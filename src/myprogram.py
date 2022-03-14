@@ -14,13 +14,13 @@ import torch.utils.data as Data
 nltk.download('punkt')
 from nltk import word_tokenize
 import pickle
-from sklearn.model_selection import train_test_split
-import time
+# from sklearn.model_selection import train_test_split
+# import time
 
 from Trie import Trie
 from Trie import append_to_dict
 from MultiLM import MultiLM
-
+import tqdm
 """
 def load_training_data():
     train_df = dataset['train']
@@ -118,8 +118,7 @@ def run_pred(data, word2idx, idx2word, trie):
     # print(start_time)
     preds = []
     all_chars = string.ascii_letters
-    for inp in data:
-        inp = inp.lower()
+    for inp in tqdm.tqdm(data):
         curr = inp.split(' ')[-1]
         old = inp.split(' ')[:-1]
 
@@ -136,26 +135,12 @@ def run_pred(data, word2idx, idx2word, trie):
         
             # rnn_time = time.time()
             # print('rnn_time', rnn_time - start_time)
+            indices_list = torch.topk(out[0], 3).indices
+            best_chars = []
+            for indices in indices_list:
+              best_chars.append(idx2word[indices.item()][0])
 
-            best_char_prob = {}
-            least = float('inf')
-            least_key = ''
-            for idx, prob in enumerate(out[0]):
-                char = idx2word[idx][0]
-                if char in best_char_prob.keys():
-                    best_char_prob[char] = max(prob, best_char_prob[char])
-
-                    if best_char_prob[char] < least:
-                        least = best_char_prob[char]
-                        least_key = char
-                else: 
-                    if len(best_char_prob) < 3:
-                        least, least_key = append_to_dict(char, prob, best_char_prob)
-                    elif prob > least:
-                        del best_char_prob[least_key]
-                        least, least_key = append_to_dict(char, prob, best_char_prob)
-
-            preds.append(''.join(best_char_prob.keys()))
+            preds.append(''.join(best_chars))
         else:
             res = trie.advance_curr(curr)
             words = []
