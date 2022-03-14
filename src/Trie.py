@@ -37,7 +37,11 @@ class Trie:
     # need to call advance_curr() before this
     def get_next_char(self):
         prob_list = torch.tensor(list(self.curr.children_prob.values()))
-        char_list = torch.tensor(list(self.curr.children_prob.keys()))
+        char_list = list(self.curr.children_prob.keys())
+        
+        if len(prob_list) <= 3:
+          return char_list
+        
         indices_list = torch.topk(prob_list, 3).indices
         best_chars = []
         
