@@ -1,3 +1,5 @@
+import torch
+
 class TrieNode:
     def __init__(self):
         # character to children dict
@@ -34,25 +36,16 @@ class Trie:
 
     # need to call advance_curr() before this
     def get_next_char(self):
-        best_char_prob = {}
-        least = float('inf')
-        least_key = ''
-        for char, prob in self.curr.children_prob.items():
-            if char in best_char_prob.keys():
-                best_char_prob[char] = max(prob, best_char_prob[char])
-
-                if best_char_prob[char] < least:
-                    least = best_char_prob[char]
-                    least_key = char
-
-            else:
-                if len(best_char_prob) < 3:
-                    least, least_key = append_to_dict(char, prob, best_char_prob)
-                elif prob > least:
-                    del best_char_prob[least_key]
-                    least, least_key = append_to_dict(char, prob, best_char_prob)
-
-        return best_char_prob.keys()
+        prob_list = torch.tensor(list(self.curr.children_prob.values()))
+        char_list = torch.tensor(list(self.curr.children_prob.keys()))
+        indices_list = torch.topk(prob_list, 3).indices
+        best_chars = []
+        
+        for indices in indices_list:
+          index = indices.item()
+          best_chars.append(char_list[index])
+            
+        return best_chars
 
     # return 0 if the str is not present in the trie
     # return 1 if curr is advanced
@@ -71,16 +64,3 @@ class Trie:
 
     def reset_curr(self):
         self.curr = self.root
-
-
-def append_to_dict(char, prob, best_char_prob):
-    best_char_prob[char] = prob
-
-    least = float('inf')
-    least_key = ''
-    for char, prob in best_char_prob.items():
-        if prob < least:
-            least = prob
-            least_key = char
-    
-    return least, least_key
